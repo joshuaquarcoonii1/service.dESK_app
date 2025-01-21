@@ -20,7 +20,7 @@ const HistoryScreen = () => {
   const fetchComplaints = async () => {
     const username =await getCurrentUser();
     try {
-      const response = await fetch(`http://172.20.10.2:3000/Greports/${username}`); // Replace with your actual server URL
+      const response = await fetch(`https://complaints-dashboard-v2.onrender.com/Greports/${username}`); // Replace with your actual server URL
       if (!response.ok) {
         throw new Error(`Error: ${response.status} - ${response.statusText}`);
       }
