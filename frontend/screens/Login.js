@@ -9,7 +9,7 @@ const LoginScreen = ({ navigation }) => {
   //login method
     const handleLogin =async () => {
       try {
-        const response = await fetch('http://172.20.10.2:3000/login', {
+        const response = await fetch('https://complaints-dashboard-v2.onrender.com/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
