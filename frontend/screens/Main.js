@@ -64,7 +64,7 @@
 
     // Handle complaint submission
     const handleSubmit = async () => {
-      const endpoint = 'http://172.20.10.2:3000/reports'; // Replace with your backend's actual URL
+      const endpoint = 'https://complaints-dashboard-v2.onrender.com/reports'; // Replace with your backend's actual URL
       const username = getCurrentUser();
       const contact = getUserContact();
       const payload = {
