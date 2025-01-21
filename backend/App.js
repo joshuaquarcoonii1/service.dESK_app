@@ -19,12 +19,11 @@ app.use(express.json());
 app.use(cors());
 
 // Replace this with your MongoDB connection string
-mongoose.connect('mongodb://localhost:27017',{ useNewUrlParser: true,
-    useUnifiedTopology: true,
-    dbName: 'ServiceDesk'})
-.then(()=>{
-    console.log("database connected");
-});
+mongoose.connect('mongodb+srv://boss_1:joshq@cluster0.1sy3gyw.mongodb.net/ServiceDesk?retryWrites=true&w=majority&appName=Cluster0')
+    .then(() => console.log('Connected to MongoDB Atlas'))
+    .catch((err) => console.error('Error connecting to MongoDB Atlas:', err));
+
+
 
 
 
