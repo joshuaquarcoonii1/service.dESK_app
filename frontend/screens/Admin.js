@@ -8,7 +8,7 @@ const ServiceDeskDashboard = () => {
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
-        const response = await fetch('http://172.20.10.2:3000/Greports'); // Replace with your backend API endpoint
+        const response = await fetch('https://complaints-dashboard-v2.onrender.com/Greports'); // Replace with your backend API endpoint
         const data = await response.stringify();
         setComplaints(data);
       } catch (error) {
@@ -22,7 +22,7 @@ const ServiceDeskDashboard = () => {
   // Handle status update
   const updateStatus = async (id) => {
     try {
-      const response = await fetch(`http://172.20.10.2:3000/Greports/${id}`, {
+      const response = await fetch(`https://complaints-dashboard-v2.onrender.com/Greports/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
