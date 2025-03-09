@@ -20,62 +20,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-//swagger
-const swaggerUi = require("swagger-ui-express");
-const swaggerJsdoc = require("swagger-jsdoc");
 
-const swaggerOptions = { 
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "My API",
-      version: "1.0.0",
-    },
-    components: {
-      schemas: {
-        User: {
-          type: "object",
-          required: ["username", "password", "name", "department", "location", "email", "contact"],
-          properties: {
-            username: { type: "string" },
-            password: { type: "string" },
-            name: { type: "string" },
-            department: { type: "string" },
-            location: { type: "string" },
-            email: { type: "string" },
-            createdAt: { type: "string", format: "date-time" },
-            contact: { type: "string" },
-          },
-        },
-        Report: {
-          type: "object",
-          required: ["username", "complaint", "department", "location", "contact"],
-          properties: {
-            username: { type: "string" },
-            complaint: { type: "string" },
-            department: { type: "string" },
-            location: { type: "string" },
-            status: { type: "string", default: "New" },
-            createdAt: { type: "string", format: "date-time" },
-            EscalatedAt: { type: "string", format: "date-time", nullable: true },
-            resolvedAt: { type: "string", format: "date-time", nullable: true },
-            remarks: { type: "string", nullable: true },
-            contact: { type: "string" },
-            verified: { type: "boolean", default: false },
-            verifiedAt: { type: "string", format: "date-time", nullable: true },
-            redoCount: { type: "number", default: 0 },
-            assignedUnit: { type: "string", nullable: true },
-            level: { type: "string", nullable: true },
-          },
-        },
-      },
-    },
-  },
-  apis: ["./App.js"], // This means Swagger will read annotations from app.js
-};
 
-const swaggerDocs = swaggerJsdoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 
 
@@ -123,84 +69,6 @@ const authenticateUser = (req, res, next) => {
 
 // User signup
 
-/**
- * @swagger
- * /signup:
- *   post:
- *     summary: Register a new user
- *     description: Creates a new user account with hashed password and returns a token.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 example: "john_doe"
- *               password:
- *                 type: string
- *                 example: "securePassword123"
- *               email:
- *                 type: string
- *                 example: "johndoe@example.com"
- *               name:
- *                 type: string
- *                 example: "John Doe"
- *               contact:
- *                 type: string
- *                 example: "+233501234567"
- *               location:
- *                 type: string
- *                 example: "Accra, Ghana"
- *               department:
- *                 type: string
- *                 example: "IT"
- *     responses:
- *       201:
- *         description: User created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "User created successfully"
- *                 token:
- *                   type: string
- *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                       example: "6501c9f2c0e7d5a1b4f0a8b2"
- *                     username:
- *                       type: string
- *                       example: "john_doe"
- *       400:
- *         description: Username is already taken
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Username is already taken"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: "Internal server error"
- */
 
 app.post('/signup', async (req, res) => {
   const { username, password,  email,name, contact, location ,department} = req.body;
@@ -240,58 +108,6 @@ app.post('/signup', async (req, res) => {
   }
 });
 // User login
-/**
- * @swagger
- * /login:
- *   post:
- *     summary: Logs in a user and returns a JWT token
- *     tags: 
- *       - Authentication
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - username
- *               - password
- *             properties:
- *               username:
- *                 type: string
- *                 example: "john_doe"
- *               password:
- *                 type: string
- *                 example: "password123"
- *     responses:
- *       200:
- *         description: Login successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Login successful"
- *                 username:
- *                   type: string
- *                 contact:
- *                   type: string
- *                 location:
- *                   type: string
- *                 department:
- *                   type: string
- *                 token:
- *                   type: string
- *                 id:
- *                   type: string
- *       400:
- *         description: Invalid username or password
- *       500:
- *         description: Server error
- */
-
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
@@ -310,59 +126,6 @@ app.post('/login', async (req, res) => {
 });
 
 // Create a report
-/**
- * @swagger
- * /reports:
- *   post:
- *     summary: Create a new report
- *     tags: 
- *       - Report
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - username
- *               - complaint
- *               - department
- *               - location
- *               - contact
- *             properties:
- *               username:
- *                 type: string
- *                 example: "john_doe"
- *               complaint:
- *                 type: string
- *                 example: "Network outage in Building A"
- *               department:
- *                 type: string
- *                 example: "IT"
- *               location:
- *                 type: string
- *                 example: "Building A"
- *               contact:
- *                 type: string
- *                 example: "1234567890"
- *     responses:
- *       201:
- *         description: Report created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Report created successfully"
- *                 report:
- *                   $ref: '#/components/schemas/Report'
- *       400:
- *         description: Missing required fields
- *       500:
- *         description: Server error
- */
 
 app.post('/reports', async (req, res) => {
   console.log('Received data:', req.body);
@@ -424,34 +187,7 @@ app.get('/Greports_2', async (req, res) => {
 });
 
 //get reports based on username
-/**
- * @swagger
- * /Greports/{username}:
- *   get:
- *     summary: Retrieve complaints by username
- *     tags:
- *       - Report
- *     parameters:
- *       - in: path
- *         name: username
- *         required: true
- *         schema:
- *           type: string
- *         description: Username to filter complaints
- *     responses:
- *       200:
- *         description: List of complaints for the user
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Report'
- *       404:
- *         description: No complaints found for this user
- *       500:
- *         description: Server error
- */
+
 
 app.get('/Greports/:username',async (req, res) => {
   const { username } = req.params;
