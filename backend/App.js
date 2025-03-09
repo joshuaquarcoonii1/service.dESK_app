@@ -1,32 +1,126 @@
-// This code assumes the use of Node.js with Express for the backend and MongoDB as the database.
-// You will need Mongoose for MongoDB schema definitions and queries.
-
+// Purpose: Main entry point for the backend server.
 // Import dependencies
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const multer = require('multer')
+const fs = require('fs');
+const path = require('path');
 //models
 const User = require('./models/User');
 const Report =require('./models/Reports');
 const ServiceAdmin=require('./models/Admin');
-
+const File = require('./models/Files');
+const JWT_SECRET="f101456e0383246f7893944e49b4fa937e907ba826dfabfdb4785fa27b116a83";
+const NameSearch = require('./models/NameSearch');
 
 // middleware
 const cors = require('cors');
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+//swagger
+const swaggerUi = require("swagger-ui-express");
+const swaggerJsdoc = require("swagger-jsdoc");
+
+const swaggerOptions = { 
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "My API",
+      version: "1.0.0",
+    },
+    components: {
+      schemas: {
+        User: {
+          type: "object",
+          required: ["username", "password", "name", "department", "location", "email", "contact"],
+          properties: {
+            username: { type: "string" },
+            password: { type: "string" },
+            name: { type: "string" },
+            department: { type: "string" },
+            location: { type: "string" },
+            email: { type: "string" },
+            createdAt: { type: "string", format: "date-time" },
+            contact: { type: "string" },
+          },
+        },
+        Report: {
+          type: "object",
+          required: ["username", "complaint", "department", "location", "contact"],
+          properties: {
+            username: { type: "string" },
+            complaint: { type: "string" },
+            department: { type: "string" },
+            location: { type: "string" },
+            status: { type: "string", default: "New" },
+            createdAt: { type: "string", format: "date-time" },
+            EscalatedAt: { type: "string", format: "date-time", nullable: true },
+            resolvedAt: { type: "string", format: "date-time", nullable: true },
+            remarks: { type: "string", nullable: true },
+            contact: { type: "string" },
+            verified: { type: "boolean", default: false },
+            verifiedAt: { type: "string", format: "date-time", nullable: true },
+            redoCount: { type: "number", default: 0 },
+            assignedUnit: { type: "string", nullable: true },
+            level: { type: "string", nullable: true },
+          },
+        },
+      },
+    },
+  },
+  apis: ["./App.js"], // This means Swagger will read annotations from app.js
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+
 
 // Replace this with your MongoDB connection string
-mongoose.connect('mongodb+srv://boss_1:joshq@cluster0.1sy3gyw.mongodb.net/ServiceDesk?retryWrites=true&w=majority&appName=Cluster0')
-    .then(() => console.log('Connected to MongoDB Atlas'))
-    .catch((err) => console.error('Error connecting to MongoDB Atlas:', err));
+mongoose.connect('mongodb+srv://boss_1:joshq@cluster0.1sy3gyw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',{ 
+  dbName: 'ServiceDesk'})
+.then(()=>{
+  console.log("database connected");
+});
 
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir); // Temporary storage directory
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
+const upload = multer({storage});
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).send('No file uploaded.');
+    }
 
+    // Save file metadata to MongoDB
+    const newFile = new File({
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      filePath: file.path, // Save path if storing file in filesystem
+    });
+    await newFile.save();
 
-
-
+    res.status(200).send({ message: 'File uploaded successfully!', file: newFile });
+  } catch (error) {
+    res.status(500).send({ message: 'Upload failed', error });
+  }
+});
 const authenticateUser = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -61,31 +155,177 @@ const authenticateUser = (req, res, next) => {
 // Routes
 
 // User signup
+
+/**
+ * @swagger
+ * /signup:
+ *   post:
+ *     summary: Register a new user
+ *     description: Creates a new user account with hashed password and returns a token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "john_doe"
+ *               password:
+ *                 type: string
+ *                 example: "securePassword123"
+ *               email:
+ *                 type: string
+ *                 example: "johndoe@example.com"
+ *               name:
+ *                 type: string
+ *                 example: "John Doe"
+ *               contact:
+ *                 type: string
+ *                 example: "+233501234567"
+ *               location:
+ *                 type: string
+ *                 example: "Accra, Ghana"
+ *               department:
+ *                 type: string
+ *                 example: "IT"
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "User created successfully"
+ *                 token:
+ *                   type: string
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "6501c9f2c0e7d5a1b4f0a8b2"
+ *                     username:
+ *                       type: string
+ *                       example: "john_doe"
+ *       400:
+ *         description: Username is already taken
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Username is already taken"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
 app.post('/signup', async (req, res) => {
-  const { username, password, name, department, location, email,contact } = req.body;
+  const { username, password,  email,name, contact, location ,department} = req.body;
 
   // Hash the password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
   try {
+    const userExists = await User.findOne({ username });
+    if (userExists) {
+      return res.status(400).json({ error: 'Username is already taken' });
+    }
     const user = new User({
       username,
       password: hashedPassword,
-      name,
-      department,
-      location,
       email,
-      contact
+      name,
+      contact,
+      location,
+      department,
     });
     await user.save();
-    res.status(201).send('User registered successfully.');
+    const token = jwt.sign({ _id: user._id }, 'f101456e0383446f7893944e49b4fa937e907ba826dfabfdb4785fa27b116a83');
+
+    res.status(201).json({
+      message: 'User created successfully',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+      },
+    });
   } catch (error) {
-    res.status(400).send(error.message);
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 // User login
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Logs in a user and returns a JWT token
+ *     tags: 
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "john_doe"
+ *               password:
+ *                 type: string
+ *                 example: "password123"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Login successful"
+ *                 username:
+ *                   type: string
+ *                 contact:
+ *                   type: string
+ *                 location:
+ *                   type: string
+ *                 department:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 id:
+ *                   type: string
+ *       400:
+ *         description: Invalid username or password
+ *       500:
+ *         description: Server error
+ */
+
+
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -97,12 +337,66 @@ app.post('/login', async (req, res) => {
     if (!validPassword) return res.status(400).send('Invalid username or password.');
 
     const token = jwt.sign({ _id: user._id }, 'f101456e0383446f7893944e49b4fa937e907ba826dfabfdb4785fa27b116a83');
-    res.status(200).json({ message: 'Login successful', username: user.username, contact:user.contact,token ,id :user._id});  } catch (error) {
+    res.status(200).json({ message: 'Login successful', username: user.username, contact:user.contact,location:user.location,department:user.department,token ,id :user._id});  } catch (error) {
     res.status(500).send('Server error.');
   }
 });
 
 // Create a report
+/**
+ * @swagger
+ * /reports:
+ *   post:
+ *     summary: Create a new report
+ *     tags: 
+ *       - Report
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - complaint
+ *               - department
+ *               - location
+ *               - contact
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "john_doe"
+ *               complaint:
+ *                 type: string
+ *                 example: "Network outage in Building A"
+ *               department:
+ *                 type: string
+ *                 example: "IT"
+ *               location:
+ *                 type: string
+ *                 example: "Building A"
+ *               contact:
+ *                 type: string
+ *                 example: "1234567890"
+ *     responses:
+ *       201:
+ *         description: Report created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Report created successfully"
+ *                 report:
+ *                   $ref: '#/components/schemas/Report'
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Server error
+ */
+
 app.post('/reports', async (req, res) => {
   console.log('Received data:', req.body);
   const { username,complaint, department, location,contact } = req.body;
@@ -135,10 +429,11 @@ app.post('/reports', async (req, res) => {
   }
 });
 //get all reports
+
 app.get('/Greports', async (req, res) => {
   try {
     const complaints = await Report.find(); // Fetch all complaints
-    res.status(200).json(complaints);
+    res.status(200).json(complaints, { message: 'All complaints fetched successfully' });
   } catch (error) {
     console.error('Error fetching complaints:', error);
     res.status(500).json({ message: 'An error occurred while fetching complaints.' });
@@ -162,6 +457,35 @@ app.get('/Greports_2', async (req, res) => {
 });
 
 //get reports based on username
+/**
+ * @swagger
+ * /Greports/{username}:
+ *   get:
+ *     summary: Retrieve complaints by username
+ *     tags:
+ *       - Report
+ *     parameters:
+ *       - in: path
+ *         name: username
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Username to filter complaints
+ *     responses:
+ *       200:
+ *         description: List of complaints for the user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Report'
+ *       404:
+ *         description: No complaints found for this user
+ *       500:
+ *         description: Server error
+ */
+
 app.get('/Greports/:username',async (req, res) => {
   const { username } = req.params;
 
@@ -182,29 +506,31 @@ app.put('/Greports/update-status/:id', async (req, res) => {
 
   try {
     // Validate the status
-    const validStatuses = ['escalated', 'completed'];
+    const validStatuses = ['escalated', 'completed','redo','resolved'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
     // Declare fields
     let EscalatedAt = null;
-    let completedAt = null;
+    let resolvedAt = null;
 
     // Update timestamps conditionally
     if (status === 'escalated') {
       EscalatedAt = Date.now(); // Set onGoingAt to current timestamp
     } else if (status === 'completed') {
-      completedAt = Date.now(); // Set completedAt to current timestamp
+      resolvedAt = Date.now(); // Set completedAt to current timestamp
     }
 
     // Build the update object
     const update = {
       status,
       ...(EscalatedAt && { EscalatedAt }), // Include onGoingAt if set
-      ...(completedAt && { completedAt }), // Include completedAt if set
+      ...(resolvedAt && { resolvedAt }), // Include completedAt if set
     };
-
+    if (status === 'redo') {
+      update.$inc = { redoCount: 1 }; // Increment redoCount by 1
+    }
     // Find the complaint by ID and update it
     const updatedReport = await Report.findByIdAndUpdate(
       id,
@@ -229,7 +555,7 @@ app.put('/Greports/update-status/:id', async (req, res) => {
 app.get('/ServiceAdminEscalate/escalated', async (req, res) => {
   try {
     // Query for complaints with status 'escalated'
-    const escalatedComplaints = await Report.find({ status:'escalated' });
+    const escalatedComplaints = await Report.find({ status: { $in: ['escalated', 'redo'] } });
 
     if (escalatedComplaints.length > 0) {
       // Return the escalated complaints if found
@@ -271,16 +597,18 @@ app.put('/ServiceAdminEscalate/escalated/update/:id', async (req, res) => {
   const { id } = req.params;
   const { status, remarks } = req.body;
 
-  let completedAt = null;
+  let resolvedAt = null;
 
   if(status==='completed'){
-    completedAt=Date.now()
+    resolvedAt=Date.now()
+  }else if(status==='resolved'){
+    resolvedAt=Date.now()
   }
 
   try {
     const complaint = await Report.findByIdAndUpdate(
       id,
-      { status, completedAt, remarks },
+      { status, resolvedAt, remarks },
       { new: true } // Return the updated document
     );
 
@@ -342,19 +670,172 @@ app.get('/history', async (req, res) => {
   }
 });
 
+// Admin signup
+app.post('/AdminSignup', async (req, res) => {
+  const { username, password, role } = req.body;
 
-// Get reports for the logged-in user
-// app.get('/reports', authenticate, async (req, res) => {
-//   try {
-//     const reports = await Report.find({ userId: req.user._id });
-//     res.send(reports);
-//   } catch (error) {
-//     res.status(500).send('Server error.');
-//   }
-// });
+  if (!username || !password || !role) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
 
-// Start the server
-const PORT =process.env.PORT ||3000;
-app.listen(PORT, () => {
+  try {
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new admin
+    const newAdmin = new ServiceAdmin({
+      username,
+      password: hashedPassword,
+      role,
+    });
+
+    await newAdmin.save();
+    res.status(201).json({ message: 'Admin created successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Admin login
+app.post('/AdminLogin', async (req, res) => {
+  const { username, password, role } = req.body;
+
+  if (!username || !password || !role) {
+    return res.status(400).json({ message: 'Username, password, and role are required' });
+  }
+
+  try {
+    // Find admin by username
+    const admin = await ServiceAdmin.findOne({ username });
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    // Compare passwords
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check if the role matches
+    if (admin.role !== role) {
+      return res.status(403).json({ message: 'Role mismatch. Please select the correct role.' });
+    }
+
+    // Generate JWT
+    const token = jwt.sign({ id: admin._id, role: admin.role }, JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(200).json({ message: 'Login successful', token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+//assignedValue
+app.post('/api/reports/:id/assign', async (req, res) => {
+  const { id } = req.params;
+  const { assignedUnit } = req.body;
+  const {level}=req.body;
+  const {category}=req.body;
+
+  try {
+    const report = await Report.findById(id);
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    report.assignedUnit = assignedUnit;
+    report.level=level;
+    report.category=category;
+    await report.save();
+
+    res.status(200).json({ message: 'Assigned unit , level and category updated successfully', report });
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating assigned unit' });
+  }
+});
+app.put('/api/reports/:id/assign', async (req, res) => {
+ 
+  const {category}=req.body;
+
+  try {
+    const report = await Report.findById(req.params.id);
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+  
+    report.category=category;
+    await report.save();
+
+    res.status(200).json({ message: 'category updated successfully', report });
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating CATEGORY' });
+  }
+});
+//priority
+app.put('/api/reports/:id/urgency', async (req, res) => {
+  const { priority, impact } = req.body;
+
+  try {
+    const report = await Report.findById(req.params.id);
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    // Ensure valid priority and impact values
+    if (
+      ![1, 2, 3, 4, 5].includes(priority) ||
+      ![1, 2, 3, 4, 5].includes(impact)
+    ) {
+      return res.status(400).json({ error: 'Priority and impact must be between 1 and 5.' });
+    }
+
+    // Update the report
+    report.priority = priority;
+    report.impact = impact;
+    report.urgency = priority * impact; // Calculate urgency
+    await report.save();
+
+    res.status(200).json({ message: 'Complaint urgency level set successfully', report });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error setting urgency of incident' });
+  }
+});
+// Search users by name
+app.get("/api/users/search", async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.status(400).json({ error: "Query parameter is required" });
+
+    // Check if the query is a number
+    const isNumber = !isNaN(query);
+
+    // Build dynamic search conditions
+    const searchConditions = [
+      { name: { $regex: query, $options: "i" } },
+      { department: { $regex: query, $options: "i" } },
+      { location: { $regex: query, $options: "i" } },
+    ];
+
+    // If the query is a number, add a direct match for avaya
+    if (isNumber) {
+      searchConditions.push({ avaya: Number(query) }); // Convert query to a number
+    }
+
+    const users = await NameSearch.find({ $or: searchConditions }).limit(10);
+
+    res.json(users);
+  } catch (error) {
+    console.error("Database Query Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+const PORT =5000||process.env.PORT;
+app.listen(PORT, "0.0.0.0",() => {
   console.log(`Server running on port ${PORT}`);
 });
