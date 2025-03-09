@@ -4,7 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const multer = require('multer')
+
 const fs = require('fs');
 const path = require('path');
 //models
@@ -20,7 +20,7 @@ const cors = require('cors');
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 //swagger
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
@@ -87,40 +87,8 @@ mongoose.connect('mongodb+srv://boss_1:joshq@cluster0.1sy3gyw.mongodb.net/?retry
   console.log("database connected");
 });
 
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir); // Temporary storage directory
-  },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname);
-  },
-});
-const upload = multer({storage});
-app.post('/upload', upload.single('file'), async (req, res) => {
-  try {
-    const file = req.file;
-    if (!file) {
-      return res.status(400).send('No file uploaded.');
-    }
 
-    // Save file metadata to MongoDB
-    const newFile = new File({
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
-      filePath: file.path, // Save path if storing file in filesystem
-    });
-    await newFile.save();
 
-    res.status(200).send({ message: 'File uploaded successfully!', file: newFile });
-  } catch (error) {
-    res.status(500).send({ message: 'Upload failed', error });
-  }
-});
 const authenticateUser = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
