@@ -11,7 +11,6 @@ const path = require('path');
 const User = require('./models/User');
 const Report =require('./models/Reports');
 const ServiceAdmin=require('./models/Admin');
-const File = require('./models/Files');
 const JWT_SECRET="f101456e0383246f7893944e49b4fa937e907ba826dfabfdb4785fa27b116a83";
 const NameSearch = require('./models/NameSearch');
 
