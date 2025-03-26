@@ -6,7 +6,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const rateLimit = require("express-rate-limit");
 const { Redis } = require("ioredis");
-const { RateLimitRedisStore } = require("rate-limit-redis");
+const { RedisStore } = require("rate-limit-redis");
 const fs = require('fs');
 const path = require('path');
 //models
@@ -133,11 +133,11 @@ const redisClient = new Redis(process.env.REDIS_URL || "redis-14999.c17.us-east-
 
 // Redis-based Rate Limiter (4 requests per 5 minutes per IP)
 const reportLimiter = rateLimit({
-  store: new RateLimitRedisStore({
+  store: new RedisStore({
     sendCommand: (...args) => redisClient.call(...args),
   }),
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 4, // 1 request per window
+  max: 4,
   message: { error: "You can only submit 4 complaints every 5 minutes. Please try again later." },
 });
 
