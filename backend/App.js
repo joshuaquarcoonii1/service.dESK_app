@@ -4,9 +4,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const rateLimit = require("express-rate-limit");
-const { Redis } = require("ioredis");
-const RedisStore = require("rate-limit-redis").default;
+import rateLimit from "express-rate-limit";
+import { RedisStore } from "rate-limit-redis"; // Correct import
+import Redis from "ioredis";
 const fs = require('fs');
 const path = require('path');
 //models
@@ -129,17 +129,16 @@ app.post('/login', async (req, res) => {
 
 // Create a report
 // Connect to Redis
-const redisClient = new Redis(process.env.REDIS_URL || "redis-14999.c17.us-east-1-4.ec2.redns.redis-cloud.com:14999");
+const redisClient = new Redis(process.env.REDIS_URL || "redis://redis-14999.c17.us-east-1-4.ec2.redns.redis-cloud.com:14999");
 
-// Redis-based Rate Limiter (4 requests per 5 minutes per IP)
+// Redis-based Rate Limiter (1 request per 5 minutes per IP)
 const reportLimiter = rateLimit({
   store: new RedisStore({
-    client: redisClient, // Use the Redis client here
-    prefix: "rate-limit:", // Optional: add a prefix for keys in Redis
+    sendCommand: (...args) => redisClient.call(...args),
   }),
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 4, // Allow 4 submissions per window
-  message: { error: "You can only submit 4 complaints every 5 minutes. Please try again later." },
+  max: 1, // 1 request per window
+  message: { error: "You can only submit 1 complaint every 5 minutes. Please try again later." },
 });
 
 
