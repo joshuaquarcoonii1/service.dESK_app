@@ -4,9 +4,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-import rateLimit from "express-rate-limit";
-import { RedisStore } from "rate-limit-redis"; // Correct import
-import Redis from "ioredis";
+const rateLimit = require("express-rate-limit");
+const { RedisStore } = require("rate-limit-redis"); // ✅ Works with CommonJS
+const Redis = require("ioredis");
+
 const fs = require('fs');
 const path = require('path');
 //models
